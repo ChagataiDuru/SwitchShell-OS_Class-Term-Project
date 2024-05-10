@@ -10,7 +10,7 @@
 
         ],
             "defines": ["__SWITCH__", "__BSD_VISIBLE"],
-            "compilerPath": "/opt/devkitpro/devkitA64/bin/aarch64-none-elf-g++",
+            "compilerPath": "/opt/devkitpro/devkitA64/bin/aarch64-none-elf-gcc",
             "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "linux-gcc-arm64"

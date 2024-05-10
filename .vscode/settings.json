@@ -1,6 +1,9 @@
 {
     "files.associations": {
         "switch.h": "c",
-        "crc.h": "c"
+        "result.h": "c",
+        "hidsys.h": "c",
+        "hidbus.h": "c",
+        "hid.h": "c"
     }
 }
