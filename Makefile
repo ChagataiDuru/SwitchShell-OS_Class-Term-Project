@@ -30,12 +30,12 @@ include $(DEVKITPRO)/libnx/switch_rules
 #     - icon.jpg
 #     - <libnx folder>/default_icon.jpg
 #---------------------------------------------------------------------------------
-VERSION_MAJOR := 1
-VERSION_MINOR := 0
+VERSION_MAJOR := 0
+VERSION_MINOR := 1
 VERSION_MICRO := 0
 
-APP_TITLE	:=	Hello World
-APP_AUTHOR	:=	bay
+APP_TITLE	:=	SwitchShell
+APP_AUTHOR	:=	Chagatai
 APP_VERSION	:=	${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_MICRO}
 
 TARGET		:=	$(subst $e ,_,$(notdir $(APP_TITLE)))

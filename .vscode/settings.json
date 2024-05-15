@@ -4,6 +4,11 @@
         "result.h": "c",
         "hidsys.h": "c",
         "hidbus.h": "c",
-        "hid.h": "c"
+        "hid.h": "c",
+        "socket.h": "c",
+        "swshell.h": "c",
+        "in.h": "c",
+        "_sockaddr_storage.h": "c",
+        "m_threads.h": "c"
     }
 }

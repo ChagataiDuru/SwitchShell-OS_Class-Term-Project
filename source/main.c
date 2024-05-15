@@ -1,108 +1,185 @@
-// Include the most common headers from the C standard library
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
-// Include the main libnx system header, for Switch development
+#include <swshell.h>
+
 #include <switch.h>
 
-// See also libnx pad.h / hid.h.
+#define PORT 22
+#define BACKLOG 10
+
+void xor_encrypt_decrypt(char *data, int data_len, const char *key, int key_len) {
+    for (int i = 0; i < data_len; i++) {
+        data[i] ^= key[i % key_len];
+    }
+}
+
+int authenticate(int client_fd) {
+    char username[256], password[256];
+
+    // Simple prompt for username/password (no encryption yet)
+    write(client_fd, "Username: ", 10);
+    read(client_fd, username, 256);
+    write(client_fd, "Password: ", 10);
+    read(client_fd, password, 256);
+
+    // Simple authentication (hardcoded for demonstration)
+    if (strcmp(username, "user\n") == 0 && strcmp(password, "pass\n") == 0) {
+        write(client_fd, "Authentication successful\n", 26);
+        return 1;
+    } else {
+        write(client_fd, "Authentication failed\n", 22);
+        return 0;
+    }
+}
+
+void *handle_client(void *arg) {
+    int client_fd = *((int *)arg);
+    free(arg);
+
+    if (!authenticate(client_fd)) {
+        close(client_fd);
+        return NULL;
+    }
+
+    char buffer[1024] = {0};
+    const char *key = "my_secret_key";
+    int key_len = strlen(key);
+
+    while (1) {
+        int valread = read(client_fd, buffer, 1024);
+        if (valread <= 0) break;
+        xor_encrypt_decrypt(buffer, valread, key, key_len);  // Decrypt
+        buffer[valread] = '\0';  // Null-terminate the command string
+        //execute_command(buffer, client_fd);
+    }
+    close(client_fd);
+    return NULL;
+}
+
+int setup_server() {
+    int server_fd;
+    struct sockaddr_in address;
+    int opt = 1;
+
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(PORT);
+
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(server_fd, BACKLOG) < 0) {
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
+
+    return server_fd;
+}
+
+void accept_connections(int server_fd, ThreadList *thread_list) {
+    while (1) {
+        struct sockaddr_in client_address;
+        socklen_t client_addrlen = sizeof(client_address);
+        int *client_fd = malloc(sizeof(int));
+
+        *client_fd = accept(server_fd, (struct sockaddr *)&client_address, &client_addrlen);
+        if (*client_fd < 0) {
+            perror("accept");
+            free(client_fd);
+            continue;
+        }
+
+        pthread_t thread_id;
+        pthread_create(&thread_id, NULL, handle_client, client_fd);
+        add_thread(thread_list, thread_id);
+    }
+}
+
+// Get and print the IP address of the Nintendo Switch
+void print_switch_ip() {
+
+    struct in_addr addr;
+    inet_aton("192.168.137.1", &addr);  // Replace with your router's IP address as needed
+
+    u32 ip;
+    nifmGetCurrentIpAddress(&ip);
+
+    printf("Switch IP: %s\n", inet_ntoa(*(struct in_addr *)&ip));
+
+    socketExit();
+}   
 
 // Main program entrypoint
-int main(int argc, char* argv[])
-{
-    // This example uses a text console, as a simple way to output text to the screen.
-    // If you want to write a software-rendered graphics application,
-    //   take a look at the graphics/simplegfx example, which uses the libnx Framebuffer API instead.
-    // If on the other hand you want to write an OpenGL based application,
-    //   take a look at the graphics/opengl set of examples, which uses EGL instead.
+int main(int argc, char* argv[]) {
+    // Initialize the console
     consoleInit(NULL);
 
-    // Configure our supported input layout: a single player with standard controller styles
+    // Configure input layout
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
 
-    // Initialize the default gamepad (which reads handheld mode inputs as well as the first connected controller)
+    // Initialize the default gamepad
     PadState pad;
     padInitializeDefault(&pad);
 
-    //Matrix containing the name of each key. Useful for printing when a key is pressed
-    char keysNames[28][32] = {
-        "A", "B", "X", "Y",
-        "StickL", "StickR", "L", "R",
-        "ZL", "ZR", "Plus", "Minus",
-        "Left", "Up", "Right", "Down",
-        "StickLLeft", "StickLUp", "StickLRight", "StickLDown",
-        "StickRLeft", "StickRUp", "StickRRight", "StickRDown",
-        "LeftSL", "LeftSR", "RightSL", "RightSR",
-    };
+    // Initialize networking
+    socketInitializeDefault();
+    romfsInit();
+	nifmInitialize(NifmServiceType_User);
+    int server_fd = setup_server();
 
-    u32 kDownOld = 0, kHeldOld = 0, kUpOld = 0; //In these variables there will be information about keys detected in the previous frame
+    // Initialize thread list
+    ThreadList thread_list;
+    init_thread_list(&thread_list, 10);
 
-    printf("\x1b[1;1HPress PLUS to exit.");
-    printf("\x1b[2;1HLeft joystick position:");
-    printf("\x1b[4;1HRight joystick position:");
+    // Print hello world message
+    printf("Hello World!\n");
+
+    // Print the IP address of the Switch
+    //print_switch_ip();
+
+    // Create a thread to handle SSH connections
+    pthread_t server_thread;
+    pthread_create(&server_thread, NULL, (void *(*)(void *))accept_connections, &thread_list);
 
     // Main loop
-    while(appletMainLoop())
-    {
-        // Scan the gamepad. This should be done once for each frame
+    while (appletMainLoop()) {
+        // Scan the gamepad
         padUpdate(&pad);
 
-        // padGetButtonsDown returns the set of buttons that have been
-        // newly pressed in this frame compared to the previous one
+        // Get buttons that are newly pressed
         u64 kDown = padGetButtonsDown(&pad);
 
-        // padGetButtons returns the set of buttons that are currently pressed
-        u64 kHeld = padGetButtons(&pad);
-
-        // padGetButtonsUp returns the set of buttons that have been
-        // newly released in this frame compared to the previous one
-        u64 kUp = padGetButtonsUp(&pad);
-
         if (kDown & HidNpadButton_Plus)
-            break; // break in order to return to hbmenu
+            break; // Exit to hbmenu
 
-        // Do the keys printing only if keys have changed
-        if (kDown != kDownOld || kHeld != kHeldOld || kUp != kUpOld)
-        {
-            // Clear console
-            consoleClear();
-
-            // These two lines must be rewritten because we cleared the whole console
-            printf("\x1b[1;1HPress PLUS to exit.");
-            printf("\x1b[2;1HLeft stick position:");
-            printf("\x1b[4;1HRight stick position:");
-
-            printf("\x1b[6;1H"); //Move the cursor to the sixth row because on the previous ones we'll write the joysticks' position
-
-            // Check if some of the keys are down, held or up
-            int i;
-            for (i = 0; i < 28; i++)
-            {
-                if (kDown & BIT(i)) printf("%s down\n", keysNames[i]);
-                if (kHeld & BIT(i)) printf("%s held\n", keysNames[i]);
-                if (kUp & BIT(i)) printf("%s up\n", keysNames[i]);
-            }
-        }
-
-        // Set keys old values for the next frame
-        kDownOld = kDown;
-        kHeldOld = kHeld;
-        kUpOld = kUp;
-
-        // Read the sticks' position
-        HidAnalogStickState analog_stick_l = padGetStickPos(&pad, 0);
-        HidAnalogStickState analog_stick_r = padGetStickPos(&pad, 1);
-
-        // Print the sticks' position
-        printf("\x1b[3;1H%04d; %04d", analog_stick_l.x, analog_stick_l.y);
-        printf("\x1b[5;1H%04d; %04d", analog_stick_r.x, analog_stick_r.y);
-
-        // Update the console, sending a new frame to the display
+        // Update the console
         consoleUpdate(NULL);
     }
 
-    // Deinitialize and clean up resources used by the console (important!)
+    // Cleanup
+    close(server_fd);
+    join_and_cleanup_threads(&thread_list);
+    pthread_cancel(server_thread); // Ensure server thread is stopped
+    socketExit();
     consoleExit(NULL);
     return 0;
 }
