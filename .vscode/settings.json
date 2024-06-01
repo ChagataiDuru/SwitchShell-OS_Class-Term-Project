@@ -9,6 +9,10 @@
         "swshell.h": "c",
         "in.h": "c",
         "_sockaddr_storage.h": "c",
-        "m_threads.h": "c"
+        "m_threads.h": "c",
+        "event.h": "c",
+        "service.h": "c",
+        "types.h": "c",
+        "stdlib.h": "c"
     }
 }

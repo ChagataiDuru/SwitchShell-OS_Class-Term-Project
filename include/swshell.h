@@ -1,14 +1,9 @@
-#include <stdlib.h>
-
-#include <switch.h>
-#include <m_threads.h>
-
 #ifndef SwitchShell_H
 #define SwitchShell_H
 
 /* Consts */
 #define SwitchShell_H_WELCOME "Welcome to SwitchShell! Type 'help' for a list of available commands.\r\n"
-#define SwitchShell_H_SEPARATOR "-------------------------------------------------------------\r\n"
+#define SEPARATOR "-------------------------------------------------------------\r\n"
 #define SwitchShell_H_HELP "List of available commands:\r\n" \
                     "\tls - get a directory listing\r\n" \
                     "\tcd - change directory\r\n" \
@@ -21,16 +16,21 @@
                     "\techo - echo the arguments\r\n" \
                     "\thelp - print this message\r\n\r\n" \
 
-
 #define SwitchShell_H_DIR "/SwitchShell_H"
 
 #define SwitchShell_H_VERSION "0.1.0"
 
+#define SWSHELL_DIR "/swshell"
+
 /* Functions */
-void xor_encrypt_decrypt(char *data, int data_len, const char *key, int key_len);
-int authenticate(int client_fd);
-void execute_command(const char *command, int client_fd);
-void *handle_client(void *arg);
-int setup_server();
-void accept_connections(int server_fd, ThreadList *thread_list);
+char *shell_reboot(int argc, char **argv, int connfd);
+char *shell_shutdown(int connfd);
+char *shell_ls(int argc, char **argv, int connfd);
+char *shell_cd(int argc, char **argv, int connfd);
+char *shell_mkdir(int argc, char **argv, int connfd);
+char *shell_rm(int argc, char **argv, int connfd);
+char *shell_cp(int argc, char **argv, int connfd);
+char *shell_cat(int argc, char **argv, int connfd);
+char *shell_echo(int argc, char **argv, int connfd);
+char *shell_help(int connfd);
 #endif
