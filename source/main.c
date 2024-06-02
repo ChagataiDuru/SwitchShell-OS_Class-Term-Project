@@ -108,11 +108,22 @@ void shell_session(int connfd) {
             char *output = shell_mkdir(arg1);
             send(connfd, output, strlen(output)+1, 0);
             free(output);
-        } /*else if (strcmp(command, "rm") == 0) {
-            char *output = shell_rm(arg1);
-            send(connfd, output, strlen(output)+1, 0);
-            free(output);
-        }*/ else if (strcmp(command, "cp") == 0) {
+        }else if (strcmp(command, "rm") == 0) {
+            char *argv[128];
+            int argc = 0;
+
+            argv[argc++] = "rm";
+            while (arg1 != NULL && argc < 128) {
+                argv[argc++] = arg1;
+                arg1 = strtok(NULL, " ");
+            }
+
+            char *output = shell_rm(argc, argv);
+            if (output != NULL) {
+                send(connfd, output, strlen(output), 0);
+                free(output);
+            }
+        }else if (strcmp(command, "cp") == 0) {
             char *output = shell_cp(arg1, arg2);
             send(connfd, output, strlen(output)+1, 0);
             free(output);

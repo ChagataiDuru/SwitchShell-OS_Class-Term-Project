@@ -30,7 +30,7 @@ char *shell_shutdown(int connfd);
 char *shell_ls();
 char *shell_cd(char *path);
 char *shell_mkdir(char *path);
-char *nxsh_rm(int argc, char **argv);
+char *shell_rm(int argc, char **argv);
 char *shell_cp(char *src, char *dst);
 char *shell_cat(int argc, char **argv);
 char *shell_echo(int argc, char **argv);

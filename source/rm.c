@@ -60,7 +60,7 @@ int recursive_delete(const char *path) {
 }
 
 // Removes a file or directory
-char *nxsh_rm(int argc, char **argv) {
+char *shell_rm(int argc, char **argv) {
     if (argc < 2) {
         return error("Usage: rm [options] [file/directory]\r\nOptions:\r\n\t-r\trecurse into directory\r\n");
     }
