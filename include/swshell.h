@@ -14,7 +14,9 @@
                     "\treboot - reboots the console\r\n" \
                     "\tshutdown - turns off the console\r\n" \
                     "\techo - echo the arguments\r\n" \
-                    "\thelp - print this message\r\n\r\n" \
+                    "\tversion - display NXSH version\r\n" \
+                    "\thelp - print this message\r\n" \
+                    "\tpwd - print working directory\r\n\r\n" \
 
 #define SwitchShell_H_DIR "/SwitchShell_H"
 
@@ -25,13 +27,20 @@
 /* Functions */
 char *shell_reboot(int argc, char **argv, int connfd);
 char *shell_shutdown(int connfd);
-char *shell_ls(int argc, char **argv, int connfd);
-char *shell_cd(int argc, char **argv, int connfd);
-char *shell_mkdir(int argc, char **argv, int connfd);
-char *shell_rm(int argc, char **argv, int connfd);
-char *shell_cp(int argc, char **argv, int connfd);
-char *shell_cat(int argc, char **argv, int connfd);
-char *shell_echo(int argc, char **argv, int connfd);
+char *shell_ls();
+char *shell_cd(char *path);
+char *shell_mkdir(char *path);
+char *nxsh_rm(int argc, char **argv);
+char *shell_cp(char *src, char *dst);
+char *shell_cat(int argc, char **argv);
+char *shell_echo(int argc, char **argv);
+char *shell_cwd();
 char *shell_help(int connfd);
-char *error(char *msg);
+
+int recursive_delete(const char *path);
+
+int is_file(const char *path);
+int exists(const char *path);
+int is_dir_empty(const char *dir);
+char *error(const char *msg);
 #endif

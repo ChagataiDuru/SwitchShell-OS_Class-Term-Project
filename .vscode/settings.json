@@ -13,6 +13,8 @@
         "event.h": "c",
         "service.h": "c",
         "types.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "dirent.h": "c",
+        "stddef.h": "c"
     },
 }

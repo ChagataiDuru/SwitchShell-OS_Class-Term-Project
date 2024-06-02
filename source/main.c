@@ -51,89 +51,126 @@ int setupServerSocket(int *lissock) {
     return listen(*lissock, 5); // Listen on the apropriate address
 }
 
-void execute_command(int connfd, char *command) {
-    char *argv[10];
-    int argc = 0;
-    //echo the command
-    send(connfd, command, strlen(command), 0);
-    // Tokenize the command into arguments
-    char *token = strtok(command, " ");
-    while (token != NULL && argc < 10) {
-        argv[argc++] = token;
-        token = strtok(NULL, " ");
-    }
-    send(connfd, "\n", 1, 0);
-    // Execute the appropriate command
-    if (argc > 0) {
-        if (strcmp(argv[0], "ls") == 0) {
-            shell_ls(argc - 1, &argv[1], connfd);
-        } else if (strcmp(argv[0], "cd") == 0) {
-            shell_cd(argc - 1, &argv[1], connfd);
-        } else if (strcmp(argv[0], "mkdir") == 0) {
-            shell_mkdir(argc - 1, &argv[1], connfd);
-        } else if (strcmp(argv[0], "rm") == 0) {
-            shell_rm(argc - 1, &argv[1], connfd);
-        } else if (strcmp(argv[0], "cp") == 0) {
-            shell_cp(argc - 1, &argv[1], connfd);
-        } else if (strcmp(argv[0], "cat") == 0) {
-            shell_cat(argc - 1, &argv[1], connfd);
-        } else if (strcmp(argv[0], "echo") == 0) {
-            shell_echo(argc - 1, &argv[1], connfd);
-        } else if (strcmp(argv[0], "help") == 0) {
-            shell_help(connfd);
-        } else if (strcmp(argv[0], "reboot") == 0) {
-            shell_reboot(argc - 1, &argv[1], connfd);
-        } else if (strcmp(argv[0], "shutdown") == 0) {
-            shell_shutdown(connfd);
-        } else {
-            const char *msg = "Unknown command. Type 'help' for a list of commands.\n";
-            send(connfd, msg, strlen(msg), 0);
-            // echo the received command
-            send(connfd, "Received: ", 10, 0);
-            // echo the command
-            send(connfd, command, strlen(command), 0);
-        }
-    }
-}
-
 void shell_session(int connfd) {
-    char buffer[BUFFER_SIZE];
+    char buffer[1024];
     ssize_t len;
-
-    // Send a welcome message
-    const char *welcome_msg = "Welcome to SwitchShell! Type your commands below:\n";
-    send(connfd, welcome_msg, strlen(welcome_msg), 0);
-
-    // Main session loop
+    char *command, *arg1, *arg2;
+    
     while (1) {
-        // Clear buffer
-        memset(buffer, 0, BUFFER_SIZE);
-
-        // Prompt for command
-        const char *prompt = "SwitchShell> ";
-        send(connfd, prompt, strlen(prompt), 0);
-
-        // Read command from client
-        len = recv(connfd, buffer, BUFFER_SIZE, 0);
+        // Send prompt to client
+        send(connfd, "SwitchShell> ", 13, 0);
+        
+        // Receive command from client
+        len = recv(connfd, buffer, sizeof(buffer) - 1, 0);
+        
         if (len <= 0) {
-            // Connection closed or error
+            break;  // Connection closed or error
+        }
+        
+        buffer[len] = '\0';  // Null-terminate the received string
+        
+        // Remove newline characters
+        char *newline = strchr(buffer, '\n');
+        if (newline) *newline = '\0';
+        newline = strchr(buffer, '\r');
+        if (newline) *newline = '\0';
+        
+        // Parse the command and arguments
+        command = strtok(buffer, " ");
+        arg1 = strtok(NULL, " ");
+        arg2 = strtok(NULL, " ");
+        
+        //Echo the command with the Text "Executing: "
+        char *output = malloc(strlen(command) + 11);
+        strcpy(output, "Executing: ");
+        strcat(output, command);
+        strcat(output, "\r\n");
+        send(connfd, output, strlen(output), 0);
+        free(output);
+
+        // Escape sequence for testing
+        char escape[2];
+        escape[0] = 0x04;
+        escape[1] = '\0';
+
+        // Execute the command
+        if (command == NULL) {
+            continue;
+        } else if (strcmp(command, "ls") == 0) {
+            char *output = shell_ls();
+            send(connfd, output, strlen(output)+1, 0);
+            free(output);
+        } else if (strcmp(command, "cd") == 0) {
+            char *output = shell_cd(arg1);
+            send(connfd, output, strlen(output)+1, 0);
+            free(output);
+        } else if (strcmp(command, "mkdir") == 0) {
+            char *output = shell_mkdir(arg1);
+            send(connfd, output, strlen(output)+1, 0);
+            free(output);
+        } /*else if (strcmp(command, "rm") == 0) {
+            char *output = shell_rm(arg1);
+            send(connfd, output, strlen(output)+1, 0);
+            free(output);
+        }*/ else if (strcmp(command, "cp") == 0) {
+            char *output = shell_cp(arg1, arg2);
+            send(connfd, output, strlen(output)+1, 0);
+            free(output);
+        } else if (strcmp(command, "cat") == 0) {
+            char *output = shell_cat(1, &arg1);
+            send(connfd, output, strlen(output)+1, 0);
+            free(output);
+        } else if (strcmp(command, "reboot") == 0) {
+            char *output = shell_reboot(0, NULL, connfd);
+            send(connfd, output, strlen(output)+1, 0);
+            free(output);
+        } else if (strcmp(command, "shutdown") == 0) {
+            char *output = shell_shutdown(connfd);
+            send(connfd, output, strlen(output)+1, 0);
+            free(output);
+        } else if (strcmp(command, "echo") == 0) {
+            char *output = shell_echo(1, &arg1);
+            send(connfd, output, strlen(output)+1, 0);
+            free(output);
+        } else if (strcmp(command, "help") == 0) {
+            send(connfd, SwitchShell_H_HELP, strlen(SwitchShell_H_HELP)+1, 0);
+        } else if (strcmp(command, "version") == 0) {
+            output = malloc(sizeof(char) * strlen(SwitchShell_H_VERSION)+16);
+            strcpy(output, "SwitchShell ");
+            strcat(output, SwitchShell_H_VERSION);
+            strcat(output, "\r\n");
+            send(connfd, output, strlen(output)+1, 0);
+        } 
+        // Print working directory
+        else if (strcmp(command, "pwd") == 0) {
+            char *path = shell_cwd();
+            size_t len = strlen(path);
+
+            output = malloc(sizeof(char) * (len+3));
+            strcpy(output, path);
+            output[len++] = '\r';
+            output[len++] = '\n';
+            output[len] = '\0';
+            // Send the path
+            send(connfd, output, len, 0);
+            free(output);
+        }
+        // End the session
+        else if (strcmp(command, "exit") == 0) {
+            close(connfd);
             break;
         }
-
-        // Strip the newline character if it exists
-        if (buffer[len - 1] == '\n') {
-            buffer[len - 1] = '\0';
+        // End the session (Ctrl+D)
+        else if (strcmp(command, escape) == 0) {
+            close(connfd);
+            break;
         }
-        const char *recv_msg = "Received: ";
-        send(connfd, recv_msg, strlen(recv_msg), 0);
-        // Echo the command back to the client
-        send(connfd, buffer, strlen(buffer), 0);
-        // Execute command
-        execute_command(connfd, buffer);
+        else {
+            send(connfd, "Unknown command. Type 'help' for a list of commands.\r\n", 52, 0);
+        }
     }
-
-    // Close the connection
-    close(connfd);
+    
+    close(connfd);  // Close the connection
 }
 
 int main(int argc, char **argv) {
