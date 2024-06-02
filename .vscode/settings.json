@@ -14,5 +14,5 @@
         "service.h": "c",
         "types.h": "c",
         "stdlib.h": "c"
-    }
+    },
 }

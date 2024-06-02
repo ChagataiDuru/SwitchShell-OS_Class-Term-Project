@@ -33,4 +33,5 @@ char *shell_cp(int argc, char **argv, int connfd);
 char *shell_cat(int argc, char **argv, int connfd);
 char *shell_echo(int argc, char **argv, int connfd);
 char *shell_help(int connfd);
+char *error(char *msg);
 #endif
