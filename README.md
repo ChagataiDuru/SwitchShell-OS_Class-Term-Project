@@ -1,10 +1,8 @@
-# Switch Homebrew Template
+# SwitchShell
 
 <p align="center">
   <img width="40%" height="auto" src="icon.jpg">
 </p>
-
-Hello World template for switch homebrew development.
 
 ## Requirements
 
